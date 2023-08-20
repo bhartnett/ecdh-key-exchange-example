@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "ephemeral-ephemeral",
+    "ephemeral-static",
+    "static-static"
+]
