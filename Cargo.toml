@@ -1,7 +1,8 @@
-[workspace]
+[package]
+name = "ecdh-key-exchange-examples"
+version = "0.1.0"
+edition = "2021"
 
-members = [
-    "ephemeral-ephemeral",
-    "ephemeral-static",
-    "static-static"
-]
+[dependencies]
+ring = "0.16.20"
+hex = "0.4.3"
