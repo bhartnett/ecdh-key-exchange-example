@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 ring = "0.16.20"
 hex = "0.4.3"
+fluent-hash = "0.2.2"

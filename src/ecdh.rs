@@ -16,20 +16,46 @@ enum Actor {
 
 pub struct EcdhEphemeralKeyExchange {
     actor: Actor,
-    rand: SystemRandom
+    rand: SystemRandom,
+    pub_key: Option<Vec<u8>>,
+    peer_pub_key: Option<Vec<u8>>,
 }
 
 impl EcdhEphemeralKeyExchange {
 
     pub fn new_client() -> EcdhEphemeralKeyExchange {
-        EcdhEphemeralKeyExchange { actor: CLIENT, rand: SystemRandom::new() }
+        EcdhEphemeralKeyExchange {
+            actor: CLIENT,
+            rand: SystemRandom::new(),
+            pub_key: None,
+            peer_pub_key: None
+        }
     }
 
     pub fn new_server() -> EcdhEphemeralKeyExchange {
-        EcdhEphemeralKeyExchange { actor: SERVER, rand: SystemRandom::new() }
+        EcdhEphemeralKeyExchange {
+            actor: SERVER,
+            rand: SystemRandom::new(),
+            pub_key: None,
+            peer_pub_key: None
+        }
     }
 
-    pub fn run(&self, stream: &mut TcpStream) -> Result<(Vec<u8>, Vec<u8>), Unspecified> {
+    pub fn client_pub_key(&self) -> Option<Vec<u8>> {
+        match self.actor {
+            CLIENT => return self.pub_key.clone(),
+            SERVER => return self.peer_pub_key.clone()
+        }
+    }
+
+    pub fn server_pub_key(&self) -> Option<Vec<u8>> {
+        match self.actor {
+            CLIENT => self.peer_pub_key.clone(),
+            SERVER => self.pub_key.clone()
+        }
+    }
+
+    pub fn run(&mut self, stream: &mut TcpStream) -> Result<(Vec<u8>, Vec<u8>), Unspecified> {
         let alg = &X25519;
         let my_private_key: EphemeralPrivateKey = EphemeralPrivateKey::generate(alg, &self.rand)?;
         let my_public_key: PublicKey = my_private_key.compute_public_key()?;
@@ -46,19 +72,27 @@ impl EcdhEphemeralKeyExchange {
         // The peer public key needs to be parsed before use so wrap it creating as an instance of UnparsedPublicKey
         let peer_public_key = UnparsedPublicKey::new(alg, peer_public_key);
 
+        // Store public keys for usage in the HashTranscript
+        self.pub_key = Some(my_public_key.as_ref().to_vec());
+        self.peer_pub_key = Some(peer_public_key.bytes().to_vec());
+
         // run ECDH to agree on a shared secret
         agree_ephemeral(my_private_key,
                         &peer_public_key,
                         Unspecified, // error to return on failure
-                        |shared_secret| Self::kdf(shared_secret))
+                        |shared_secret| self.kdf(shared_secret))
     }
 
-    fn kdf(shared_secret: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Unspecified> {
+
+
+    fn kdf(&self, shared_secret: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Unspecified> {
         // As recommended in RFC 7748 we should apply a KDF on the key material here
-        let salt = Salt::new(HKDF_SHA256, b"salt bytes"); // TODO: what to use for salt?
+        let salt = Salt::new(HKDF_SHA256, b""); // salt is optional
         let pseudo_rand_key: Prk = salt.extract(shared_secret);
-        //let context_data = [my_public_key.as_ref(), peer_public_key.bytes()]; // TODO: what to use for context?
-        let context_data = [];
+
+        let mut context = self.client_pub_key().unwrap();
+        context.append(&mut self.server_pub_key().unwrap());
+        let context_data = [context.as_slice()];
 
         const SESSION_KEY_LEN: usize = 2 * SHA256_OUTPUT_LEN;
         struct SessionKeyType;
