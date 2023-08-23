@@ -30,13 +30,13 @@ impl AeadEncrypter {
         }
     }
 
-    pub fn encrypt(&mut self, data: &[u8], associated_data: &[u8]) -> Vec<u8> {
+    pub fn encrypt(&mut self, data: &[u8], associated_data: &[u8]) -> Result<Vec<u8>, Unspecified> {
         let associated_data = Aad::from(associated_data);
 
         let mut in_out = data.to_vec();
-        let tag = self.sealing_key.seal_in_place_separate_tag(associated_data, &mut in_out).unwrap();
+        let tag = self.sealing_key.seal_in_place_separate_tag(associated_data, &mut in_out)?;
 
-        [&in_out, tag.as_ref()].concat()
+        Ok([&in_out, tag.as_ref()].concat())
     }
 
 }
@@ -54,10 +54,10 @@ impl AeadDecrypter {
         }
     }
 
-    pub fn decrypt(&mut self, ciphertext: &[u8], associated_data: &[u8]) -> Vec<u8> {
+    pub fn decrypt(&mut self, ciphertext: &[u8], associated_data: &[u8]) -> Result<Vec<u8>, Unspecified> {
         let associated_data = Aad::from(associated_data);
 
         let mut in_out = ciphertext.to_vec();
-        self.opening_key.open_in_place(associated_data, &mut in_out).unwrap().to_vec()
+        Ok(self.opening_key.open_in_place(associated_data, &mut in_out)?.to_vec())
     }
 }

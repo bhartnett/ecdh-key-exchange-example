@@ -1,4 +1,5 @@
-use std::io::{Read, Write};
+use std::io;
+use std::io::{Error, ErrorKind, Read, Write};
 use std::net::TcpStream;
 use std::thread::sleep;
 use std::time::Duration;
@@ -11,14 +12,30 @@ const SERVER_PORT: &str = "7654";
 const BUFFER_SIZE: usize = 256;
 
 fn main() {
-    // Connect to server
-    let mut stream = TcpStream::connect(format!("{}:{}", SERVER_HOST, SERVER_PORT)).unwrap();
+     loop {
+         // Connect to server
+         let connection = TcpStream::connect(format!("{}:{}", SERVER_HOST, SERVER_PORT));
+         if connection.is_err() {
+             println!("Client unable to connect to server at {}:{}", SERVER_HOST, SERVER_PORT);
+             sleep(Duration::new(2, 0));
+             continue;
+         }
 
+         println!("Connection established with server at {}:{}", SERVER_HOST, SERVER_PORT);
+
+         if handle_session(connection.unwrap()).is_err() {
+             println!("Client unable to handle connection with server at {}:{}", SERVER_HOST, SERVER_PORT);
+             sleep(Duration::new(2, 0));
+             continue;
+         }
+     }
+}
+
+fn handle_session(mut stream: TcpStream) -> io::Result<usize> {
     // Run the ephemeral to ephemeral key exchange as the client and return the session keys.
-    // Two session keys are returned, one for each direction of communication between the client and server.
-    // HKDF is used to derive the session keys from the output of the ECDH key exchange.
     let ecdh = EcdhEphemeralKeyExchange::new_client();
-    let (client_to_server, server_to_client) = ecdh.run(&mut stream).unwrap();
+    let (client_to_server, server_to_client) = ecdh.run(&mut stream)
+        .map_err(|_e| Error::new(ErrorKind::Other, "Key exchange failed"))?;
     let mut encrypter = AeadEncrypter::new(&client_to_server);
     let mut decrypter = AeadDecrypter::new(&server_to_client);
 
@@ -28,17 +45,19 @@ fn main() {
 
         // write to stream
         let request = format!("Hello {}", counter);
-        let ciphertext = encrypter.encrypt(request.as_bytes(), counter.to_string().as_bytes());
-        let bytes_written = stream.write(&ciphertext).unwrap();
+        let ciphertext = encrypter.encrypt(request.as_bytes(), counter.to_string().as_bytes())
+            .map_err(|_e| Error::new(ErrorKind::Other, "Encryption failed"))?;
+        let bytes_written = stream.write(&ciphertext)?;
         println!("Client sent request {:?} bytes", bytes_written);
 
         // read from stream
         let mut buffer = [0; BUFFER_SIZE];
-        let bytes_read = stream.read(&mut buffer).unwrap();
-        let plaintext = decrypter.decrypt(&buffer[..bytes_read], counter.to_string().as_bytes());
-        println!("Client received request: {:?}", String::from_utf8(plaintext).unwrap());
-    
+        let bytes_read = stream.read(&mut buffer)?;
+        let plaintext = decrypter.decrypt(&buffer[..bytes_read], counter.to_string().as_bytes())
+            .map_err(|_e| Error::new(ErrorKind::Other, "Decryption failed"))?;
+        println!("Client received response: {:?}", String::from_utf8(plaintext)
+            .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?);
+
         sleep(Duration::new(5, 0));
     }
-
 }
