@@ -4,9 +4,9 @@ use std::net::{TcpListener, TcpStream};
 use std::thread::sleep;
 use std::time::Duration;
 
-use ecdh_key_exchange_examples::aead::{AeadDecrypter, AeadEncrypter};
-use ecdh_key_exchange_examples::ecdh::EcdhEphemeralKeyExchange;
-use ecdh_key_exchange_examples::transcript::HashTranscript;
+use ecdh_key_exchange_example::aead::{AeadDecrypter, AeadEncrypter};
+use ecdh_key_exchange_example::ecdh::EcdhEphemeralKeyExchange;
+use ecdh_key_exchange_example::transcript::HashTranscript;
 
 const SERVER_HOST: &str = "127.0.0.1";
 const SERVER_PORT: &str = "7654";
@@ -29,7 +29,7 @@ fn main() {
         println!("Connection established with client at {:?}", address);
 
         if handle_session(stream).is_err() {
-            println!("Server unable to handle connection with client at {}", address);
+            println!("Server unable to handle session with client at {}", address);
             sleep(Duration::new(2, 0));
             continue;
         }
