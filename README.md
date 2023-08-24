@@ -1,4 +1,4 @@
-# ecdh-key-change-examples
+# ECDH Key Exchange Example
 
 In this project I've implemented an example of an ECDH key exchange where both parties in the protocol generate ephemeral keys, 
 then using these keys they generate a shared secret. Two session keys are then derived from the shared secret, one for each direction 
@@ -24,10 +24,10 @@ AES-GCM requires passing a nonce to each encryption operation in order to random
 The nonce must be unique and so we need to take care to never use repeated nonces for the same encryption key. The nonce doesn't need to be 
 unpredictable so we simply use a counter starting from 1 which is incremented for each encryption operation. 
 
-## Transcript
+## Hash Transcript
 A hash transcript is used to authenticate each AEAD decryption operation (similar to the design used in Noise Protocol Framework). We append the 
 public keys and every message sent and received to the hash transcript in order to enforce that both the client and server are seeing the exact 
-same messages in the same order. The hash transcript is implemented by simply hashing new messages with the previous transcript hash which creates
+same messages in the same order. The hash transcript is implemented by using SHA-256 to hash new messages with the previous transcript hash which creates
 a kind of hash chain.
 
 ## Start the Client
