@@ -23,18 +23,17 @@ pub struct EcdhEphemeralKeyExchange {
 
 impl EcdhEphemeralKeyExchange {
 
-    pub fn new_client() -> EcdhEphemeralKeyExchange {
-        EcdhEphemeralKeyExchange {
-            actor: CLIENT,
-            rand: SystemRandom::new(),
-            pub_key: None,
-            peer_pub_key: None
-        }
+    pub fn new_client() -> Self {
+        Self::new(CLIENT)
     }
 
-    pub fn new_server() -> EcdhEphemeralKeyExchange {
+    pub fn new_server() -> Self {
+        Self::new(SERVER)
+    }
+
+    fn new(actor: Actor) -> Self {
         EcdhEphemeralKeyExchange {
-            actor: SERVER,
+            actor,
             rand: SystemRandom::new(),
             pub_key: None,
             peer_pub_key: None
@@ -105,12 +104,8 @@ impl EcdhEphemeralKeyExchange {
         let output_key_material = pseudo_rand_key.expand(&context_data, SessionKeyType)?;
         let mut result = [0u8; SESSION_KEY_LEN];
         output_key_material.fill(&mut result).unwrap();
-        //println!("{}: result = {:?}", actor, hex::encode(result)); // don't print this in production
 
         let session_key = result.split_at(SESSION_KEY_LEN / 2);
-        //println!("{}: session_key.0 = {:?}", actor, hex::encode(session_key.0)); // don't print this in production
-        //println!("{}: session_key.1 = {:?}", actor, hex::encode(session_key.1)); // don't print this in production
-
         Ok((session_key.0.to_vec(), session_key.1.to_vec()))
     }
 }
