@@ -78,13 +78,12 @@ impl EcdhEphemeralKeyExchange {
         // run ECDH to agree on a shared secret
         agree_ephemeral(my_private_key,
                         &peer_public_key,
-                        Unspecified, // error to return on failure
                         |shared_secret| self.kdf(shared_secret))
     }
 
 
 
-    fn kdf(&self, shared_secret: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Unspecified> {
+    fn kdf(&self, shared_secret: &[u8]) -> (Vec<u8>, Vec<u8>) {
         // As recommended in RFC 7748 we should apply a KDF on the key material here
         let salt = Salt::new(HKDF_SHA256, b""); // salt is optional
         let pseudo_rand_key: Prk = salt.extract(shared_secret);
@@ -101,11 +100,11 @@ impl EcdhEphemeralKeyExchange {
             }
         }
 
-        let output_key_material = pseudo_rand_key.expand(&context_data, SessionKeyType)?;
+        let output_key_material = pseudo_rand_key.expand(&context_data, SessionKeyType).unwrap();
         let mut result = [0u8; SESSION_KEY_LEN];
         output_key_material.fill(&mut result).unwrap();
 
         let session_key = result.split_at(SESSION_KEY_LEN / 2);
-        Ok((session_key.0.to_vec(), session_key.1.to_vec()))
+        (session_key.0.to_vec(), session_key.1.to_vec())
     }
 }

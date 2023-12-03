@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ring = "0.16.20"
+ring = "0.17.6"
 hex = "0.4.3"
-fluent-hash = "0.2.2"
+fluent-hash = "0.2.3"
